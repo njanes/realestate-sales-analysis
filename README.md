@@ -8,6 +8,8 @@ Predicting residential sale prices in King County, Washington, using regression 
 * Waterfront homes have a median sale price roughly 3x higher than non-waterfront homes.
 * Adding second-order polynomial features to a Ridge model raised test-set R² from 0.65 to 0.72.
 * Cross-validation confirms the polynomial model's improvement is real, not an artifact of the train/test split: it holds across all 5 folds with a low standard deviation.
+* Adding location (longitude and zipcode) and fitting on log price raised cross-validated R² from 0.740 to 0.870 and cut the mean absolute error from $116k to $73k.
+* Changing the Ridge alpha anywhere from 0.01 to 10 made no difference to R²; larger values made it worse.
 
 ## Results
 
@@ -19,10 +21,11 @@ Predicting residential sale prices in King County, Washington, using regression 
 |Ridge (α = 0.1)|11 features|0.65|Test set (15%)|
 |Ridge (α = 0.1) + degree-2 polynomial|11 features|0.72|Test set (15%)|
 |Ridge (α = 0.1)|11 features|0.658 ± 0.007|5-fold cross-validation|
-|Ridge (α = 0.1) + degree-2 polynomial|11 features|**0.740 ± 0.021**|5-fold cross-validation|
+|Ridge (α = 0.1) + degree-2 polynomial|11 features|0.740 ± 0.021|5-fold cross-validation|
+|Ridge (α = 0.1) + degree-2 polynomial|11 features + `long` + zipcode|0.862 ± 0.011|5-fold cross-validation|
+|Ridge (α = 0.1) + degree-2 polynomial, log price|11 features + `long` + zipcode|**0.870 ± 0.020**|5-fold cross-validation|
  
-![Sale price by waterfront view](images/boxplot.png)
-![Sale price vs. above-ground square footage](images/scatter.png)
+![Sale price by waterfront view](images/boxplot.png) ![Sale price vs. square footage](images/scatter.png)
 
 ## Approach
 
@@ -31,12 +34,12 @@ Predicting residential sale prices in King County, Washington, using regression 
 3. **Modelling:** built single-feature and multi-feature linear regressions, then a scikit-learn pipeline combining scaling and polynomial features. For house size, the models use `sqft_living` alone: `sqft_above` and `sqft_basement` add up to it exactly, and keeping the basement split raised cross-validated R² by only 0.004.
 4. **Refinement:** used Ridge regularization on standardized features with an 85/15 train/test split, with and without polynomial features.
 5. **Validation:** compared both Ridge models with 5-fold cross-validation, refitting preprocessing inside each fold.
+6. **Improvement:** added longitude and a one-hot encoded zipcode, fitted the model on log price, and checked Ridge alpha values from 0.01 to 1,000.
 
-## Limitations and Next Steps
+## Limitations
 
-* Price is heavily right-skewed; a log transform of the target would likely improve fit.
-* Location (zipcode, lat/long) is mostly unused; encoding neighbourhood effects is the most likely next improvement.
-* The Ridge alpha was fixed at 0.1. Tuning it with a grid search could improve results.
+* Predictions are converted back from log price, so they estimate the typical (median) price for a home's features and run slightly low on average.
+* The sales cover one year (May 2014 to May 2015), so the model reflects that year's market.
 
 ## Data
 
@@ -49,9 +52,11 @@ pip install -r requirements.txt
 jupyter notebook WA_realestate.ipynb
 ```
 
+`python plots.py` rebuilds the two images in `images/`.
+
 ## Tools
 
 Python, pandas, NumPy, Matplotlib, Seaborn, scikit-learn
 
-*Completed as part of the IBM Data Science Professional Certificate.*
+*Initially completed as part of the IBM Data Science Professional Certificate and later expanded upon as a personal project.*
 
